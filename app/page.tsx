@@ -22,57 +22,26 @@ const items = [
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [contentVisible, setContentVisible] = useState(false);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const loader = useRef<HTMLDivElement | null>(null);
   const path = useRef<SVGPathElement | null>(null);
   const initialCurve = 400;
   const duration = 1000;
-  let start: number | undefined;
 
+  // Handle window dimensions on client side
   useEffect(() => {
-    setPath(initialCurve);
-    document.body.style.overflow = "hidden";
-
-    setTimeout(() => {
-      requestAnimationFrame(animate);
-    }, 500);
-
-    return () => {
-      document.body.style.overflow = "";
+    const updateDimensions = () => {
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight + 400,
+      });
     };
+
+    updateDimensions();
+    window.addEventListener("resize", updateDimensions);
+
+    return () => window.removeEventListener("resize", updateDimensions);
   }, []);
-
-  const animate = (timestamp: number) => {
-    if (start === undefined) {
-      start = timestamp;
-    }
-    const elapsed = timestamp - start;
-
-    const newCurve = easeOutQuad(elapsed, initialCurve, -400, duration);
-    setPath(newCurve);
-
-    if (loader.current) {
-      const newTop = easeOutQuad(elapsed, 0, -loaderHeight(), duration);
-      loader.current.style.transform = `translateY(${newTop}px)`;
-    }
-
-    if (elapsed < duration) {
-      requestAnimationFrame(animate);
-    } else {
-      if (loader.current) {
-        loader.current.style.visibility = "hidden";
-      }
-      finishLoading();
-    }
-  };
-
-  const finishLoading = () => {
-    setIsLoading(false);
-    document.body.style.overflow = "";
-
-    setTimeout(() => {
-      setContentVisible(true);
-    }, 100);
-  };
 
   const easeOutQuad = (
     time: number,
@@ -83,29 +52,80 @@ export default function Home() {
     return -end * (time /= duration) * (time - 2) + start;
   };
 
-  const loaderHeight = (): number => {
-    return window.innerHeight + 400;
+  const setPath = (curve: number) => {
+    if (!path.current || !dimensions.width || !dimensions.height) return;
+
+    const width = dimensions.width;
+    const height = dimensions.height;
+
+    path.current.setAttributeNS(
+      null,
+      "d",
+      `
+      M0 0
+      L${width} 0
+      L${width} ${height - curve}
+      C${width * 0.75} ${height - curve * 0.5} ${width * 0.25} ${
+        height - curve * 0.5
+      } 0 ${height - curve}
+      L0 0
+      `
+    );
   };
 
-  const setPath = (curve: number) => {
-    const width = window.innerWidth;
-    const height = loaderHeight();
-    if (path.current) {
-      path.current.setAttributeNS(
-        null,
-        "d",
-        `
-        M0 0
-        L${width} 0
-        L${width} ${height - curve}
-        C${width * 0.75} ${height - curve * 0.5} ${width * 0.25} ${
-          height - curve * 0.5
-        } 0 ${height - curve}
-        L0 0
-        `
-      );
+  const animate = (timestamp: number) => {
+    if (!loader.current || !dimensions.height) return;
+
+    const start = loader.current.dataset.startTime
+      ? parseInt(loader.current.dataset.startTime)
+      : timestamp;
+
+    if (!loader.current.dataset.startTime) {
+      loader.current.dataset.startTime = start.toString();
+    }
+
+    const elapsed = timestamp - start;
+    const newCurve = easeOutQuad(elapsed, initialCurve, -400, duration);
+    setPath(newCurve);
+
+    const newTop = easeOutQuad(elapsed, 0, -dimensions.height, duration);
+    loader.current.style.transform = `translateY(${newTop}px)`;
+
+    if (elapsed < duration) {
+      requestAnimationFrame(animate);
+    } else {
+      loader.current.style.visibility = "hidden";
+      finishLoading();
     }
   };
+
+  useEffect(() => {
+    if (!dimensions.width || !dimensions.height) return;
+
+    setPath(initialCurve);
+    document.body.style.overflow = "hidden";
+
+    setTimeout(() => {
+      requestAnimationFrame(animate);
+    }, 500);
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [dimensions]);
+
+  const finishLoading = () => {
+    setIsLoading(false);
+    document.body.style.overflow = "";
+
+    setTimeout(() => {
+      setContentVisible(true);
+    }, 100);
+  };
+
+  if (!dimensions.width || !dimensions.height) {
+    return null; // Return null on initial server-side render
+  }
 
   return (
     <ReactLenis root className="overflow-x-hidden min-h-screen flex flex-col">
@@ -138,13 +158,13 @@ export default function Home() {
           ref={loader}
           className="fixed inset-0 w-full bg-[#1E1E1E] z-50"
           style={{
-            height: `${loaderHeight()}px`,
+            height: `${dimensions.height}px`,
           }}
         >
           <svg
             className="absolute inset-0 w-full h-full"
             preserveAspectRatio="none"
-            viewBox={`0 0 ${window.innerWidth} ${loaderHeight()}`}
+            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
           >
             <path ref={path} fill="#1E1E1E" strokeWidth="0" />
           </svg>
