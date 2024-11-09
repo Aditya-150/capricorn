@@ -107,6 +107,7 @@ export default function Home() {
     setTimeout(() => {
       requestAnimationFrame(animate);
       setShowContent(true);
+      document.body.style.overflowY = "auto"; // Ensures scrolling after loading
     }, 500);
 
     return () => {
