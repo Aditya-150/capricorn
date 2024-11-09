@@ -2,20 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&display=swap');
+
 :root {
-  --background: #ffffff;
+  --background: #F9F5E0;
   --foreground: #171717;
+  --dark: #1E1E1E;
+  --font-serif: "Poltawski Nowy", serif;
+  --font-sans: "Lexend", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
 body {
   color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-zinc-200;
+  font-family: var(--font-sans);
 }
+
+
