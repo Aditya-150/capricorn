@@ -29,7 +29,6 @@ export default function Home() {
   const duration = 600;
   let start: number | undefined;
 
-  // Handle window dimensions
   useEffect(() => {
     const updateDimensions = () => {
       setDimensions({
@@ -56,8 +55,7 @@ export default function Home() {
     if (!path.current || !dimensions.width || !dimensions.height) return;
 
     const width = dimensions.width;
-    const height = dimensions.height + 200; // Add extra height for smooth transition
-
+    const height = dimensions.height + 200; 
     path.current.setAttributeNS(
       null,
       "d",
@@ -93,7 +91,6 @@ export default function Home() {
     if (elapsed < duration) {
       requestAnimationFrame(animate);
     } else {
-      // Animation complete
       setIsLoading(false);
       if (loader.current) {
         loader.current.style.display = "none";
@@ -104,7 +101,6 @@ export default function Home() {
   useEffect(() => {
     if (!dimensions.width || !dimensions.height) return;
 
-    // Prevent scroll during loading
     document.body.style.overflow = "hidden";
     setPath(initialCurve);
 
@@ -118,7 +114,6 @@ export default function Home() {
     };
   }, [dimensions]);
 
-  // Don't render anything until we have dimensions
   if (!dimensions.width || !dimensions.height) {
     return null;
   }
@@ -126,7 +121,6 @@ export default function Home() {
   return (
     <ReactLenis root className="overflow-x-hidden min-h-screen flex flex-col">
       <main className="flex-grow relative">
-        {/* Content */}
         {showContent && <Hero />}
         <div
           className={`transition-opacity duration-700 ${
@@ -142,7 +136,6 @@ export default function Home() {
           <Menubar items={items} />
         </div>
 
-        {/* Loader */}
         <div
           ref={loader}
           className="fixed inset-0 w-full bg-[#1E1E1E] z-50"
