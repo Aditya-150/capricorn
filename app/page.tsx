@@ -21,25 +21,25 @@ const items = [
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
-  const [contentVisible, setContentVisible] = useState(false);
+  const [showContent, setShowContent] = useState(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const loader = useRef<HTMLDivElement | null>(null);
   const path = useRef<SVGPathElement | null>(null);
-  const initialCurve = 400;
-  const duration = 1000;
+  const initialCurve = 200;
+  const duration = 600;
+  let start: number | undefined;
 
-  // Handle window dimensions on client side
+  // Handle window dimensions
   useEffect(() => {
     const updateDimensions = () => {
       setDimensions({
         width: window.innerWidth,
-        height: window.innerHeight + 400,
+        height: window.innerHeight,
       });
     };
 
     updateDimensions();
     window.addEventListener("resize", updateDimensions);
-
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
 
@@ -56,7 +56,7 @@ export default function Home() {
     if (!path.current || !dimensions.width || !dimensions.height) return;
 
     const width = dimensions.width;
-    const height = dimensions.height;
+    const height = dimensions.height + 200; // Add extra height for smooth transition
 
     path.current.setAttributeNS(
       null,
@@ -64,49 +64,53 @@ export default function Home() {
       `
       M0 0
       L${width} 0
-      L${width} ${height - curve}
-      C${width * 0.75} ${height - curve * 0.5} ${width * 0.25} ${
-        height - curve * 0.5
-      } 0 ${height - curve}
+      L${width} ${height}
+      Q${width / 2} ${height - curve} 0 ${height}
       L0 0
       `
     );
   };
 
   const animate = (timestamp: number) => {
-    if (!loader.current || !dimensions.height) return;
-
-    const start = loader.current.dataset.startTime
-      ? parseInt(loader.current.dataset.startTime)
-      : timestamp;
-
-    if (!loader.current.dataset.startTime) {
-      loader.current.dataset.startTime = start.toString();
+    if (start === undefined) {
+      start = timestamp;
     }
-
     const elapsed = timestamp - start;
-    const newCurve = easeOutQuad(elapsed, initialCurve, -400, duration);
+
+    const newCurve = easeOutQuad(elapsed, initialCurve, -200, duration);
     setPath(newCurve);
 
-    const newTop = easeOutQuad(elapsed, 0, -dimensions.height, duration);
-    loader.current.style.transform = `translateY(${newTop}px)`;
+    if (loader.current) {
+      const newPosition = easeOutQuad(
+        elapsed,
+        0,
+        -(dimensions.height + 200),
+        duration
+      );
+      loader.current.style.transform = `translateY(${newPosition}px)`;
+    }
 
     if (elapsed < duration) {
       requestAnimationFrame(animate);
     } else {
-      loader.current.style.visibility = "hidden";
-      finishLoading();
+      // Animation complete
+      setIsLoading(false);
+      if (loader.current) {
+        loader.current.style.display = "none";
+      }
     }
   };
 
   useEffect(() => {
     if (!dimensions.width || !dimensions.height) return;
 
-    setPath(initialCurve);
+    // Prevent scroll during loading
     document.body.style.overflow = "hidden";
+    setPath(initialCurve);
 
     setTimeout(() => {
       requestAnimationFrame(animate);
+      setShowContent(true);
     }, 500);
 
     return () => {
@@ -114,59 +118,44 @@ export default function Home() {
     };
   }, [dimensions]);
 
-  const finishLoading = () => {
-    setIsLoading(false);
-    document.body.style.overflow = "";
-
-    setTimeout(() => {
-      setContentVisible(true);
-    }, 100);
-  };
-
+  // Don't render anything until we have dimensions
   if (!dimensions.width || !dimensions.height) {
-    return null; // Return null on initial server-side render
+    return null;
   }
 
   return (
     <ReactLenis root className="overflow-x-hidden min-h-screen flex flex-col">
       <main className="flex-grow relative">
+        {/* Content */}
+        {showContent && <Hero />}
         <div
-          className={`transition-all duration-700 ${
-            contentVisible
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-4"
+          className={`transition-opacity duration-700 ${
+            isLoading ? "opacity-0" : "opacity-100"
           }`}
-          style={{
-            pointerEvents: contentVisible ? "auto" : "none",
-          }}
         >
-          {!isLoading && (
-            <>
-              <Hero />
-              <About />
-              <Works />
-              <Services />
-              <Testimonies />
-              <Contact />
-              <Footer />
-              <Menubar items={items} />
-            </>
-          )}
+          <About />
+          <Works />
+          <Services />
+          <Testimonies />
+          <Contact />
+          <Footer />
+          <Menubar items={items} />
         </div>
 
+        {/* Loader */}
         <div
           ref={loader}
           className="fixed inset-0 w-full bg-[#1E1E1E] z-50"
           style={{
-            height: `${dimensions.height}px`,
+            height: `${dimensions.height + 200}px`,
           }}
         >
           <svg
             className="absolute inset-0 w-full h-full"
             preserveAspectRatio="none"
-            viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+            viewBox={`0 0 ${dimensions.width} ${dimensions.height + 200}`}
           >
-            <path ref={path} fill="#1E1E1E" strokeWidth="0" />
+            <path ref={path} fill="#1E1E1E" stroke="#1E1E1E" strokeWidth="1" />
           </svg>
         </div>
       </main>
